@@ -4,9 +4,11 @@ from typing import List
 
 input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
 
+
 def reverse(string: str) -> str:
     string = "".join(reversed(string))
     return string
+
 
 class Opcode:
     def __init__(self, instruction: int):
@@ -23,8 +25,8 @@ class State:
         self._memory = program.copy()
         self._instruction_pointer = 0
 
-    def next_instruction(self, offset: int):
-        self._instruction_pointer += offset
+    def set_instruction_pointer(self, instruction_pointer: int):
+        self._instruction_pointer = instruction_pointer
 
     def opcode(self) -> Opcode:
         if (self._instruction_pointer < 0):
@@ -57,8 +59,12 @@ class Instruction:
     def size(self) -> int:
         pass
 
+    def next_instruction(self, instruction_pointer: int) -> int:
+        return instruction_pointer + self.size()
+
     def execute(self, state: State, input: List[int]) -> int:
-        pass
+        next_ip = self.next_instruction(state._instruction_pointer)
+        state.set_instruction_pointer(next_ip)
 
 
 class AddInstruction(Instruction):
@@ -70,6 +76,7 @@ class AddInstruction(Instruction):
         result = a + b
 
         state.write_parameter(2, result)
+        super().execute(state, input)
 
 
 class MultiplyInstruction(Instruction):
@@ -81,6 +88,7 @@ class MultiplyInstruction(Instruction):
         result = a * b
 
         state.write_parameter(2, result)
+        super().execute(state, input)
 
 
 class InputInstruction(Instruction):
@@ -89,13 +97,63 @@ class InputInstruction(Instruction):
     def execute(self, state, input: List[int]):
         value = input.pop()
         state.write_parameter(0, value)
+        super().execute(state, input)
 
 
 class OutputInstruction(Instruction):
     def size(self) -> int: return 2
 
     def execute(self, state, input: List[int]) -> int:
-        return state.read_parameter(0)
+        output = state.read_parameter(0)
+        super().execute(state, input)
+        return output
+
+
+class JumpIfTrueInstruction(Instruction):
+    def size(self) -> int: return 3
+
+    def execute(self, state, input):
+        value = state.read_parameter(0)
+        address = state.read_parameter(1)
+
+        if (value != 0):
+            state.set_instruction_pointer(address)
+        else:
+            super().execute(state, input)
+
+class JumpIfFalseInstruction(Instruction):
+    def size(self) -> int: return 3
+
+    def execute(self, state, input):
+        value = state.read_parameter(0)
+        address = state.read_parameter(1)
+
+        if (value == 0):
+            state.set_instruction_pointer(address)
+        else:
+            super().execute(state, input)
+
+
+class LessThanInstruction(Instruction):
+    def size(self) -> int: return 4
+
+    def execute(self, state, input):
+        a = state.read_parameter(0)
+        b = state.read_parameter(1)
+        result = 1 if (a < b) else 0
+        state.write_parameter(2, result)
+        super().execute(state, input)
+
+
+class EqualsInstruction(Instruction):
+    def size(self) -> int: return 4
+
+    def execute(self, state, input):
+        a = state.read_parameter(0)
+        b = state.read_parameter(1)
+        result = 1 if (a == b) else 0
+        state.write_parameter(2, result)
+        super().execute(state, input)
 
 
 class HaltInstruction(Instruction):
@@ -108,6 +166,10 @@ INSTRUCTION_MAP = {
     2: MultiplyInstruction(),
     3: InputInstruction(),
     4: OutputInstruction(),
+    5: JumpIfTrueInstruction(),
+    6: JumpIfFalseInstruction(),
+    7: LessThanInstruction(),
+    8: EqualsInstruction(),
     99: HaltInstruction()
 }
 
@@ -127,9 +189,7 @@ class IntcodeComputer:
 
     def _execute_opcode(self, opcode: Opcode, input: List[int]) -> int:
         instruction = INSTRUCTION_MAP[opcode.opcode]
-        output = instruction.execute(self._state, input)
-        self._state.next_instruction(instruction.size())
-        return output
+        return instruction.execute(self._state, input)
 
 
 def test1():
@@ -139,6 +199,7 @@ def test1():
     output = computer.execute(input)
     print(output)
 
+
 def test2():
     program = [1002, 4, 3, 4, 33]
     input = []
@@ -146,16 +207,26 @@ def test2():
     output = computer.execute(input)
     print(output)
 
+
 def read_intlist(input_file: str) -> List[int]:
     with open(input_file) as input:
         line = input.readline()
         return [int(s) for s in line.split(',')]
 
-def part1():
+def execute_program(input: List[int]) -> List[int]:
     program = read_intlist(input_file)
-    input = [1]
     computer = IntcodeComputer(program)
-    output = computer.execute(input)
+    return computer.execute(input)
+
+def part1():
+    input = [1]
+    output = execute_program(input)
     print("Part 1: {}".format(output))
 
+def part2():
+    input = [5]
+    output = execute_program(input)
+    print("Part 2: {}".format(output))
+
 part1()
+part2()
