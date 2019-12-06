@@ -1,26 +1,42 @@
+from __future__ import annotations
+
 import os
-from typing import List
+from typing import List, Set
 
 input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
 dummy_file = os.path.join(os.path.dirname(__file__), 'dummy.txt')
 
 
 class Node:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self.parent = None
         self.childs = set()
 
-    def set_parent(self, parent):
+    def set_parent(self, parent: Node):
         self.parent = parent
         parent.childs.add(self)
 
-    def count_all_parents(self):
+    def count_all_parents(self) -> int:
+        return len(self.all_parents())
+
+    def all_parents(self) -> Set[Node]:
+        parents = set()
         if self.parent:
-            return 1 + self.parent.count_all_parents()
-        else:
-            return 0
-    
+            parents.add(self.parent)
+            parents |= self.parent.all_parents()
+
+        return parents
+
+    def distance(self, parent: Node) -> int:
+        distance = 1
+        found_parent = self.parent
+        while (found_parent != parent):
+            distance += 1
+            found_parent = found_parent.parent
+
+        return distance
+
     def __repr__(self):
         return "{}({})".format(self.name, self.count_all_parents())
 
@@ -38,21 +54,36 @@ class OrbitalMap:
 
             self.nodes[inner] = inner_node
             self.nodes[outer] = outer_node
-    
-    def count_all_orbits(self):
+
+    def count_all_orbits(self) -> int:
         all_orbits = 0
         for node in self.nodes.values():
             all_orbits += node.count_all_parents()
-        
+
         return all_orbits
 
-def part1():
-    with open(input_file) as input:
-        map = OrbitalMap(input.read().splitlines())
-        print(map.nodes)
-        print("Part 1: {}".format(map.count_all_orbits()))
+    def shortest_path(self, start: Node, destination: Node) -> int:
+        common_parents = start.all_parents() & destination.all_parents()
+        distance = 99999
+        for common_parent in common_parents:
+            distance = min(distance, start.distance(
+                common_parent) + destination.distance(common_parent))
+        return distance
 
-part1() # 1674 is too low
-                
-    
 
+def part1(map: OrbitalMap):
+    print("Part 1: {}".format(map.count_all_orbits()))
+
+
+def part2(map: OrbitalMap):
+    start = map.nodes['YOU'].parent
+    destination = map.nodes['SAN'].parent
+    transfers = map.shortest_path(start, destination)
+    print("Part 2: {} (from {} to {})".format(
+        transfers, start.name, destination.name))
+
+
+with open(input_file) as input:
+    map = OrbitalMap(input.read().splitlines())
+    part1(map)
+    part2(map)
