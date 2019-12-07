@@ -67,4 +67,15 @@ async def part1():
     print(f'Part 1: {max_thrust}')
 
 
+async def part2():
+    program = read_intlist(input_file)
+    phase_sequences = itertools.permutations([5, 6, 7, 8, 9])
+
+    max_thrust = -1
+    for phases in phase_sequences:
+        thrust = await try_amplifier(program, phases)
+        max_thrust = max(thrust, max_thrust)
+    print(f'Part 2: {max_thrust}')
+
 asyncio.run(part1())
+asyncio.run(part2())
