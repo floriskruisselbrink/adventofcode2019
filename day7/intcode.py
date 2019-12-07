@@ -1,3 +1,5 @@
+import logging
+from asyncio import Queue
 from typing import List
 
 
@@ -23,8 +25,10 @@ class Opcode:
 
 
 class State:
-    def __init__(self, program: List[int]):
+    def __init__(self, program: List[int], input_queue: Queue, output_queue: Queue):
         self._memory = program.copy()
+        self._input = input_queue
+        self._output = output_queue
         self._instruction_pointer = 0
 
     def set_instruction_pointer(self, instruction_pointer: int):
@@ -34,6 +38,12 @@ class State:
         if (self._instruction_pointer < 0):
             return None
         return Opcode(self._read(self._instruction_pointer))
+
+    async def read_input(self) -> int:
+        return await self._input.get()
+
+    async def write_output(self, value: int):
+        await self._output.put(value)
 
     def read_parameter(self, index: int) -> int:
         """ first parameter has index 0 """
@@ -64,7 +74,7 @@ class Instruction:
     def next_instruction(self, instruction_pointer: int) -> int:
         return instruction_pointer + self.size()
 
-    def execute(self, state: State, input: List[int]) -> int:
+    async def execute(self, state: State):
         next_ip = self.next_instruction(state._instruction_pointer)
         state.set_instruction_pointer(next_ip)
 
@@ -72,96 +82,102 @@ class Instruction:
 class AddInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input: List[int]):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = a + b
 
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class MultiplyInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input: List[int]):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = a * b
 
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class InputInstruction(Instruction):
     def size(self) -> int: return 2
 
-    def execute(self, state, input: List[int]):
-        value = input.pop(0)
+    async def execute(self, state):
+        value = await state.read_input()
+        logging.debug('Input %d', value)
         state.write_parameter(0, value)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class OutputInstruction(Instruction):
     def size(self) -> int: return 2
 
-    def execute(self, state, input: List[int]) -> int:
+    async def execute(self, state):
         output = state.read_parameter(0)
-        super().execute(state, input)
-        return output
+        await state.write_output(output)
+        logging.debug('Output %d', output)
+        await super().execute(state)
 
 
 class JumpIfTrueInstruction(Instruction):
     def size(self) -> int: return 3
 
-    def execute(self, state, input):
+    async def execute(self, state):
         value = state.read_parameter(0)
         address = state.read_parameter(1)
 
         if (value != 0):
             state.set_instruction_pointer(address)
         else:
-            super().execute(state, input)
+            await super().execute(state)
 
 
 class JumpIfFalseInstruction(Instruction):
     def size(self) -> int: return 3
 
-    def execute(self, state, input):
+    async def execute(self, state):
         value = state.read_parameter(0)
         address = state.read_parameter(1)
 
         if (value == 0):
             state.set_instruction_pointer(address)
         else:
-            super().execute(state, input)
+            await super().execute(state)
 
 
 class LessThanInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = 1 if (a < b) else 0
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class EqualsInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = 1 if (a == b) else 0
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class HaltInstruction(Instruction):
     # TODO: betere manier verzinnen om programma te beeindigen
     def size(self) -> int: return -9000
+
+    async def execute(self, state):
+        # TODO: cancel asyncio task
+        await super().execute(state)
 
 
 INSTRUCTION_MAP = {
@@ -178,18 +194,12 @@ INSTRUCTION_MAP = {
 
 
 class IntcodeComputer:
-    def __init__(self, program: List[int]):
-        self._state = State(program)
+    def __init__(self, program: List[int], input_queue: Queue, output_queue: Queue):
+        self._state = State(program, input_queue, output_queue)
 
-    def execute(self, input: List[int]) -> List[int]:
-        output = []
-
-        while self._state.opcode() is not None:
-            opcode_output = self._execute_opcode(self._state.opcode(), input)
-            if opcode_output is not None:
-                output.append(opcode_output)
-        return output
-
-    def _execute_opcode(self, opcode: Opcode, input: List[int]) -> int:
-        instruction = INSTRUCTION_MAP[opcode.opcode]
-        return instruction.execute(self._state, input)
+    async def execute(self):
+        current_opcode = self._state.opcode()
+        while current_opcode is not None:
+            instruction = INSTRUCTION_MAP[current_opcode.opcode]
+            await instruction.execute(self._state)
+            current_opcode = self._state.opcode()
