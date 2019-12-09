@@ -32,11 +32,11 @@ def part2():
         image_data = input.readline().rstrip()
     width = 25
     height = 6
-    layers = list(chunkstring(image_data, width*height))
+    layers = chunkstring(image_data, width*height)
 
-    result = layers[0]
-    for i in range(1, len(layers)):
-        result = combine_layers(result, layers[i])
+    result = next(layers)
+    for layer in layers:
+        result = combine_layers(result, layer)
     
     result = result.replace('0', ' ')
     result = result.replace('1', '#')
