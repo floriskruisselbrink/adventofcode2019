@@ -40,7 +40,7 @@ class Point:
 
 
 class PaintingRobot:
-    def __init__(self, program: List[int]):
+    def __init__(self, program: List[int], starting_color: int):
         self.input = asyncio.Queue()
         self.output = asyncio.Queue()
         self.computer = IntcodeComputer(program, self.input, self.output)
@@ -52,7 +52,7 @@ class PaintingRobot:
         self.top_left = Point(0, 0)
         self.bottom_right = Point(0, 0)
         self.grid = {}
-        self.paint_current_tile(BLACK)
+        self.paint_current_tile(starting_color)
 
     async def execute(self):
         self.is_running = True
@@ -125,7 +125,7 @@ class PaintingRobot:
             print()
 
 def test1():
-    robot = PaintingRobot([])
+    robot = PaintingRobot([], BLACK)
     robot.paint_current_tile(WHITE)
     robot.move_in_direction(TURN_LEFT)
     robot.paint_current_tile(BLACK)
@@ -146,11 +146,18 @@ def test1():
 
 async def part1():
     program = read_intlist(input_file)
-    robot = PaintingRobot(program)
+    robot = PaintingRobot(program, BLACK)
     await robot.execute()
     robot.print_grid()
     print(f'Part1: {robot.tiles_painted} tiles painted')
 
+async def part2():
+    program = read_intlist(input_file)
+    robot = PaintingRobot(program, WHITE)
+    await robot.execute()
+    robot.print_grid()
+    print(f'Part2: {robot.tiles_painted} tiles painted')
 
 test1()
 asyncio.run(part1())
+asyncio.run(part2())
