@@ -1,6 +1,6 @@
 import logging
 from asyncio import Queue
-from typing import List
+from typing import Coroutine, List, Union
 
 
 def read_intlist(input_file: str) -> List[int]:
@@ -25,7 +25,7 @@ class Opcode:
 
 
 class State:
-    def __init__(self, program: List[int], input_queue: Queue, output_queue: Queue):
+    def __init__(self, program: List[int], input_queue: Union[Queue, Coroutine], output_queue: Queue):
         self._memory = program.copy()
         self._input = input_queue
         self._output = output_queue
@@ -44,7 +44,10 @@ class State:
         return Opcode(self._read(self._instruction_pointer))
 
     async def read_input(self) -> int:
-        return await self._input.get()
+        if (isinstance(self._input, Queue)):
+            return await self._input.get()
+        else:
+            return await self._input()
 
     async def write_output(self, value: int):
         await self._output.put(value)
