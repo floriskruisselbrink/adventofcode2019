@@ -1,11 +1,14 @@
 import asyncio
 import os
+import curses
 from dataclasses import dataclass, replace
 from typing import List
 
 from intcode import IntcodeComputer, read_intlist
 
 input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
+
+DISPLAY = True
 
 TILE_EMPTY = 0
 TILE_WALL = 1
@@ -23,7 +26,8 @@ class Point:
 
 
 class GameComputer:
-    def __init__(self, program: List[int]):
+    def __init__(self, program: List[int], window):
+        self.window = window
         self.output = asyncio.Queue(maxsize=1)
         self.computer = IntcodeComputer(
             program, self.input_handler, self.output)
@@ -36,6 +40,11 @@ class GameComputer:
         self.bottom_right = Point(0, 0)
 
     async def run(self):
+        if self.window:
+            curses.curs_set(False)
+            self.window.erase()
+            self.window.refresh()
+
         tasks = [
             asyncio.create_task(self.run_computer()),
             asyncio.create_task(self.output_handler())
@@ -70,15 +79,19 @@ class GameComputer:
                 break
             elif (x == -1) and (y == 0):
                 self.score = value
+                if self.window: self.window.addstr(0, 0, f'Score: {value:<8}', curses.A_REVERSE)
             else:
                 self.grid[Point(x, y)] = value
 
+                if self.window:
+                    self.window.addch(y, x, TILE_VALUES[value])
+
                 if value == TILE_BALL:
                     self.ball = Point(x, y)
-                    # self.print_grid()
+                    if self.window: self.window.refresh()
                 elif value == TILE_PADDLE:
                     self.paddle = Point(x, y)
-                    # self.print_grid()
+                    if self.window: self.window.refresh()
 
                 if x < self.top_left.x:
                     self.top_left = replace(self.top_left, x=x)
@@ -119,13 +132,23 @@ async def part1():
     print(f'Part 1: total {block_tiles} block tiles')
 
 
-async def part2():
+async def part2(window):
     program = read_intlist(input_file)
     program[0] = 2  # update number of coins
-    game = GameComputer(program)
+    game = GameComputer(program, window)
     await game.run()
-    #game.print_grid()
 
-    print(f'Part 2: end score {game.score}')
+    if window:
+        window.getkey()
+    else:
+        print(f'Part 2: end score {game.score}')
 
-asyncio.run(part2())
+
+def main(window):
+    asyncio.run(part2(window))
+
+
+if DISPLAY:
+    curses.wrapper(main)
+else:
+    main()
