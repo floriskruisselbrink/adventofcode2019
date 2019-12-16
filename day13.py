@@ -1,12 +1,10 @@
 import asyncio
-import os
 import curses
 from dataclasses import dataclass, replace
 from typing import List
 
-from intcode import IntcodeComputer, read_intlist
-
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
+from intcode import IntcodeComputer
+from utils import read_intlist
 
 DISPLAY = True
 
@@ -133,7 +131,7 @@ async def part1():
 
 
 async def part2(window):
-    program = read_intlist(input_file)
+    program = read_intlist('day13.txt')
     program[0] = 2  # update number of coins
     game = GameComputer(program, window)
     await game.run()

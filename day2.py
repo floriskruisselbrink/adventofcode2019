@@ -1,20 +1,17 @@
-import os
 from typing import List
 
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
+from utils import read_intlist
 
-def read_intlist(input_file: str) -> List[int]:
-    with open(input_file) as input:
-        line = input.readline()
-        return [int(s) for s in line.split(',')]
 
 def add(environment: List[int], a: int, b: int, c: int):
     result = environment[a] + environment[b]
     environment[c] = result
 
+
 def multiply(environment: List[int], a: int, b: int, c: int):
     result = environment[a] * environment[b]
     environment[c] = result
+
 
 def execute_opcode(environment: List[int], instruction_pointer: int) -> int:
     opcode = environment[instruction_pointer]
@@ -31,6 +28,7 @@ def execute_opcode(environment: List[int], instruction_pointer: int) -> int:
         multiply(environment, a, b, c)
         return instruction_pointer + 4
 
+
 def execute_program(program: List[int], noun: int, verb: int) -> int:
     environment = program.copy()
     environment[1] = noun
@@ -42,11 +40,13 @@ def execute_program(program: List[int], noun: int, verb: int) -> int:
 
     return environment[0]
 
+
 def part1(input_file: str):
     program = read_intlist(input_file)
     result = execute_program(program, 12, 2)
 
     print('Part 1: {}'.format(result))
+
 
 def part2(input_file: str):
     program = read_intlist(input_file)
@@ -60,5 +60,6 @@ def part2(input_file: str):
                 print('Part 2: {}'.format(100*noun+verb))
                 return
 
-part1(input_file)
-part2(input_file)
+
+part1('day2.txt')
+part2('day2.txt')

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from itertools import combinations
-from typing import List, Tuple
-from math import gcd
-from functools import reduce
 from copy import deepcopy
+from dataclasses import dataclass, field
+from functools import reduce
+from itertools import combinations
+from math import gcd
+from typing import List, Tuple
+
 
 @dataclass
 class Point:

@@ -2,7 +2,7 @@ import os
 from itertools import cycle
 from typing import Iterator
 
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
+from utils import read_line
 
 FFT_PATTERN = [0, 1, 0, -1]
 
@@ -35,8 +35,7 @@ def fft(input_signal: str, phases: int) -> int:
 
 
 def part1():
-    with open(input_file) as input:
-        input_signal = input.read().replace('\n', '')
+    input_signal = read_line('day16.txt')
 
     print(f'Part 1: {fft(input_signal, 100)}')
 

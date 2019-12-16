@@ -1,10 +1,6 @@
-from typing import List
-
-
-def read_intlist(input_file: str) -> List[int]:
-    with open(input_file) as input:
-        line = input.readline()
-        return [int(s) for s in line.split(',')]
+import logging
+from asyncio import Queue
+from typing import Coroutine, List, Union
 
 
 def reverse(string: str) -> str:
@@ -23,17 +19,32 @@ class Opcode:
 
 
 class State:
-    def __init__(self, program: List[int]):
+    def __init__(self, program: List[int], input_queue: Union[Queue, Coroutine], output_queue: Queue):
         self._memory = program.copy()
+        self._input = input_queue
+        self._output = output_queue
         self._instruction_pointer = 0
+        self._relative_base = 0
 
     def set_instruction_pointer(self, instruction_pointer: int):
         self._instruction_pointer = instruction_pointer
+
+    def update_relative_base(self, offset: int):
+        self._relative_base += offset
 
     def opcode(self) -> Opcode:
         if (self._instruction_pointer < 0):
             return None
         return Opcode(self._read(self._instruction_pointer))
+
+    async def read_input(self) -> int:
+        if (isinstance(self._input, Queue)):
+            return await self._input.get()
+        else:
+            return await self._input()
+
+    async def write_output(self, value: int):
+        await self._output.put(value)
 
     def read_parameter(self, index: int) -> int:
         """ first parameter has index 0 """
@@ -42,19 +53,41 @@ class State:
         if (parameter_mode == 0):
             address = self._read(self._instruction_pointer + index + 1)
             return self._read(address)
-        else:
+        elif (parameter_mode == 1):
             return self._read(self._instruction_pointer + index + 1)
+        elif (parameter_mode == 2):
+            address = self._read(self._instruction_pointer + index + 1)
+            return self._read(self._relative_base + address)
+        else:
+            raise ValueError(
+                f'Unsupported parameter_mode {parameter_mode} for reading')
 
     def write_parameter(self, index: int, value: int):
         """ reads address from parameter index, writes value to that position """
-        address = self._read(self._instruction_pointer + index + 1)
-        self._write(address, value)
+        opcode = self.opcode()
+        parameter_mode = opcode.parameter_mode(index)
+        if (parameter_mode == 0):
+            address = self._read(self._instruction_pointer + index + 1)
+            self._write(address, value)
+        elif (parameter_mode == 2):
+            address = self._read(self._instruction_pointer + index + 1)
+            self._write(self._relative_base + address, value)
+        else:
+            raise ValueError(
+                f'Unsupported parameter_mode {parameter_mode} for writing')
 
     def _read(self, address: int) -> int:
+        self._ensure_enough_memory(address)
         return self._memory[address]
 
     def _write(self, address: int, value: int):
+        self._ensure_enough_memory(address)
         self._memory[address] = value
+
+    def _ensure_enough_memory(self, address: int):
+        needed = address - len(self._memory) + 1
+        if (needed > 0):
+            self._memory = self._memory + [0] * needed
 
 
 class Instruction:
@@ -64,7 +97,7 @@ class Instruction:
     def next_instruction(self, instruction_pointer: int) -> int:
         return instruction_pointer + self.size()
 
-    def execute(self, state: State, input: List[int]) -> int:
+    async def execute(self, state: State):
         next_ip = self.next_instruction(state._instruction_pointer)
         state.set_instruction_pointer(next_ip)
 
@@ -72,91 +105,102 @@ class Instruction:
 class AddInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input: List[int]):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = a + b
 
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class MultiplyInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input: List[int]):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = a * b
 
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class InputInstruction(Instruction):
     def size(self) -> int: return 2
 
-    def execute(self, state, input: List[int]):
-        value = input.pop(0)
+    async def execute(self, state):
+        value = await state.read_input()
+        logging.debug('Input %d', value)
         state.write_parameter(0, value)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class OutputInstruction(Instruction):
     def size(self) -> int: return 2
 
-    def execute(self, state, input: List[int]) -> int:
+    async def execute(self, state):
         output = state.read_parameter(0)
-        super().execute(state, input)
-        return output
+        await state.write_output(output)
+        logging.debug('Output %d', output)
+        await super().execute(state)
 
 
 class JumpIfTrueInstruction(Instruction):
     def size(self) -> int: return 3
 
-    def execute(self, state, input):
+    async def execute(self, state):
         value = state.read_parameter(0)
         address = state.read_parameter(1)
 
         if (value != 0):
             state.set_instruction_pointer(address)
         else:
-            super().execute(state, input)
+            await super().execute(state)
 
 
 class JumpIfFalseInstruction(Instruction):
     def size(self) -> int: return 3
 
-    def execute(self, state, input):
+    async def execute(self, state):
         value = state.read_parameter(0)
         address = state.read_parameter(1)
 
         if (value == 0):
             state.set_instruction_pointer(address)
         else:
-            super().execute(state, input)
+            await super().execute(state)
 
 
 class LessThanInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = 1 if (a < b) else 0
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
 
 
 class EqualsInstruction(Instruction):
     def size(self) -> int: return 4
 
-    def execute(self, state, input):
+    async def execute(self, state):
         a = state.read_parameter(0)
         b = state.read_parameter(1)
         result = 1 if (a == b) else 0
         state.write_parameter(2, result)
-        super().execute(state, input)
+        await super().execute(state)
+
+
+class AdjustRelativeBaseInstruction(Instruction):
+    def size(self) -> int: return 2
+
+    async def execute(self, state):
+        a = state.read_parameter(0)
+        state.update_relative_base(a)
+        await super().execute(state)
 
 
 class HaltInstruction(Instruction):
@@ -173,23 +217,18 @@ INSTRUCTION_MAP = {
     6: JumpIfFalseInstruction(),
     7: LessThanInstruction(),
     8: EqualsInstruction(),
+    9: AdjustRelativeBaseInstruction(),
     99: HaltInstruction()
 }
 
 
 class IntcodeComputer:
-    def __init__(self, program: List[int]):
-        self._state = State(program)
+    def __init__(self, program: List[int], input_queue: Queue, output_queue: Queue):
+        self._state = State(program, input_queue, output_queue)
 
-    def execute(self, input: List[int]) -> List[int]:
-        output = []
-
-        while self._state.opcode() is not None:
-            opcode_output = self._execute_opcode(self._state.opcode(), input)
-            if opcode_output is not None:
-                output.append(opcode_output)
-        return output
-
-    def _execute_opcode(self, opcode: Opcode, input: List[int]) -> int:
-        instruction = INSTRUCTION_MAP[opcode.opcode]
-        return instruction.execute(self._state, input)
+    async def execute(self):
+        current_opcode = self._state.opcode()
+        while current_opcode is not None:
+            instruction = INSTRUCTION_MAP[current_opcode.opcode]
+            await instruction.execute(self._state)
+            current_opcode = self._state.opcode()

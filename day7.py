@@ -1,15 +1,12 @@
 import asyncio
 import itertools
 import logging
-import os
 import string
 from asyncio import Queue
 from typing import List
 
-from intcode import IntcodeComputer, read_intlist
-
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
-
+from intcode import IntcodeComputer
+from utils import read_intlist
 
 async def amplifier_worker(name: str, program: List[int], input: Queue, output: Queue):
     amplifier = IntcodeComputer(program, input, output)
@@ -57,7 +54,7 @@ async def test1():
 
 
 async def part1():
-    program = read_intlist(input_file)
+    program = read_intlist('day7.txt')
     phase_sequences = itertools.permutations([0, 1, 2, 3, 4])
 
     max_thrust = -1
@@ -68,7 +65,7 @@ async def part1():
 
 
 async def part2():
-    program = read_intlist(input_file)
+    program = read_intlist('day7.txt')
     phase_sequences = itertools.permutations([5, 6, 7, 8, 9])
 
     max_thrust = -1

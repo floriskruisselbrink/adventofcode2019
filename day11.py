@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from dataclasses import dataclass, field, replace
 from typing import List
 
-from intcode import IntcodeComputer, read_intlist
-
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
+from intcode import IntcodeComputer
+from utils import read_intlist
 
 WHITE = 1
 BLACK = 0
@@ -124,6 +122,7 @@ class PaintingRobot:
                 print(color, end='')
             print()
 
+
 def test1():
     robot = PaintingRobot([], BLACK)
     robot.paint_current_tile(WHITE)
@@ -144,15 +143,17 @@ def test1():
     robot.print_grid()
     print(f'Test1: {robot.tiles_painted} tiles painted')
 
+
 async def part1():
-    program = read_intlist(input_file)
+    program = read_intlist('day11.txt')
     robot = PaintingRobot(program, BLACK)
     await robot.execute()
     robot.print_grid()
     print(f'Part1: {robot.tiles_painted} tiles painted')
 
+
 async def part2():
-    program = read_intlist(input_file)
+    program = read_intlist('day11.txt')
     robot = PaintingRobot(program, WHITE)
     await robot.execute()
     robot.print_grid()

@@ -1,11 +1,9 @@
 import asyncio
-import os
 from asyncio import Queue
 from typing import List
 
-from intcode import IntcodeComputer, read_intlist
-
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
+from intcode import IntcodeComputer
+from utils import read_intlist
 
 
 async def run_program(program: List[int], input_signal: int):
@@ -22,12 +20,13 @@ async def run_program(program: List[int], input_signal: int):
 
 
 async def part1():
-    program = read_intlist(input_file)
+    program = read_intlist('day9.txt')
     print('Part 1:')
     await run_program(program, 1)
 
+
 async def part2():
-    program = read_intlist(input_file)
+    program = read_intlist('day9.txt')
     print('Part 2:')
     await run_program(program, 2)
 
@@ -46,7 +45,7 @@ async def test2():
 
 
 async def test3():
-    program = [104,1125899906842624,99]
+    program = [104, 1125899906842624, 99]
     print('Test 3')
     await run_program(program, 1)
 

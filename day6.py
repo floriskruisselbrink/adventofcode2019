@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import os
 from typing import List, Set
 
-input_file = os.path.join(os.path.dirname(__file__), 'input.txt')
-dummy_file = os.path.join(os.path.dirname(__file__), 'dummy.txt')
+from utils import read_input_by_line
 
 
 class Node:
@@ -83,7 +81,6 @@ def part2(map: OrbitalMap):
         transfers, start.name, destination.name))
 
 
-with open(input_file) as input:
-    map = OrbitalMap(input.read().splitlines())
-    part1(map)
-    part2(map)
+map = OrbitalMap(read_input_by_line('day6.txt'))
+part1(map)
+part2(map)

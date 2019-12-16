@@ -1,10 +1,10 @@
 from __future__ import annotations
-import os
 from collections import OrderedDict
 from dataclasses import dataclass
 from math import atan2, degrees, pi, sqrt
 from typing import Dict, List, Set, Tuple
 
+from utils import read_input_by_line
 
 @dataclass(frozen=True)
 class Point:
@@ -84,15 +84,9 @@ class AsteroidMap:
         return result
 
 
-def read_file(filename: str) -> List[str]:
-    input_file = os.path.join(os.path.dirname(__file__), filename)
-    with open(input_file) as input:
-        lines = input.read().splitlines()
-    return lines
-
 
 def part1(filename: str) -> Tuple[int, Point]:
-    map = AsteroidMap(read_file(filename))
+    map = AsteroidMap(read_input_by_line(filename))
 
     count, asteroid = map.find_best_location_for_ims()
     print(f'{filename}: {count} visible from {asteroid}')
@@ -100,7 +94,7 @@ def part1(filename: str) -> Tuple[int, Point]:
 
 
 def part2(filename: str, viewing_point: Point, nth_vaporized: int = -1):
-    map = AsteroidMap(read_file(filename))
+    map = AsteroidMap(read_input_by_line(filename))
 
     asteroids = map.visible_asteroids_in_order(viewing_point)
     print(f'{filename}: {asteroids[nth_vaporized-1]}')
@@ -108,17 +102,17 @@ def part2(filename: str, viewing_point: Point, nth_vaporized: int = -1):
 
 
 if False:
-    assert part1('dummy0.txt') == (8, Point(3, 4))
-    assert part1('dummy1.txt') == (33, Point(5, 8))
-    assert part1('dummy2.txt') == (35, Point(1, 2))
-    assert part1('dummy3.txt') == (41, Point(6, 3))
-    assert part1('dummy4.txt') == (210, Point(11, 13))
-    part1('input.txt')
+    assert part1('day10-dummy0.txt') == (8, Point(3, 4))
+    assert part1('day10-dummy1.txt') == (33, Point(5, 8))
+    assert part1('day10-dummy2.txt') == (35, Point(1, 2))
+    assert part1('day10-dummy3.txt') == (41, Point(6, 3))
+    assert part1('day10-dummy4.txt') == (210, Point(11, 13))
+    part1('day10.txt')
 
 if True:
-    assert part2('dummy4.txt', Point(11, 13), 1) == Point(11, 12)
-    assert part2('dummy4.txt', Point(11, 13), 2) == Point(12, 1)
-    assert part2('dummy4.txt', Point(11, 13), 200) == Point(8, 2)
-    assert part2('dummy4.txt', Point(11, 13), 299) == Point(11, 1)
-    part2('input.txt', Point(20, 19), 200)
+    assert part2('day10-dummy4.txt', Point(11, 13), 1) == Point(11, 12)
+    assert part2('day10-dummy4.txt', Point(11, 13), 2) == Point(12, 1)
+    assert part2('day10-dummy4.txt', Point(11, 13), 200) == Point(8, 2)
+    assert part2('day10-dummy4.txt', Point(11, 13), 299) == Point(11, 1)
+    part2('day10.txt', Point(20, 19), 200)
 # rotation starts at 1/2*pi, downwards to 0, to -pi, than from pi downwards again

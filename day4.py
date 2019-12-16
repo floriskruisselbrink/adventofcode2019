@@ -10,6 +10,7 @@ def meets_criteria(password: str) -> bool:
 
     return has_adjacent
 
+
 def meets_criteria2(password: str) -> bool:
     previous = '0'
     adjacent_count = 1
@@ -31,21 +32,24 @@ def meets_criteria2(password: str) -> bool:
 
     return has_two_adjacent
 
+
 def part1():
     found_passwords = 0
     for password in range(153517, 630396):
         if meets_criteria(str(password)):
-            found_passwords += 1 
+            found_passwords += 1
 
     print("Part 1: {}".format(found_passwords))
+
 
 def part2():
     found_passwords = 0
     for password in range(153517, 630395):
         if meets_criteria2(str(password)):
             found_passwords += 1
-    
+
     print("Part 2: {}".format(found_passwords))
+
 
 part1()
 part2()
