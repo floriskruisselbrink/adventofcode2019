@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 from typing import List
 
 
@@ -20,3 +21,9 @@ def read_intlist(input_file: str) -> List[int]:
 
 def _file_path(input_file: str) -> str:
     return os.path.join(os.path.dirname(__file__), '../input', input_file)
+
+
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int

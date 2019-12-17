@@ -2,6 +2,8 @@ import logging
 from asyncio import Queue
 from typing import Coroutine, List, Union
 
+from utils import read_intlist
+
 
 def reverse(string: str) -> str:
     string = "".join(reversed(string))
@@ -223,8 +225,13 @@ INSTRUCTION_MAP = {
 
 
 class IntcodeComputer:
-    def __init__(self, program: List[int], input_queue: Queue, output_queue: Queue):
-        self._state = State(program, input_queue, output_queue)
+    def __init__(self, program: Union[List[int], str], input_queue: Queue, output_queue: Queue):
+        if isinstance(program, str):
+            code = read_intlist(program)
+        else:
+            code = program
+
+        self._state = State(code, input_queue, output_queue)
 
     async def execute(self):
         current_opcode = self._state.opcode()
