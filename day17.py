@@ -65,4 +65,56 @@ async def part1():
         print(line)
     print(f'Part 1: {sum(alignments)}')
 
-asyncio.run(part1())
+async def inout_handler(input_queue, output_queue):
+    input_text = [
+        'C,A,C,A,B,A,B,C,B,B',
+        'L,6,L,12,R,12,L,4',
+        'L,12,R,12,L,6',
+        'R,12,L,10,L,10',
+        'n'
+    ]
+
+    input_iterator = iter(input_text)
+
+    while True:
+        output = await output_queue.get()
+        try:
+            print(chr(output), end='')
+        except ValueError:
+            print(f'Part 2: {output}')
+            return
+
+        while not output_queue.empty():
+            output = await output_queue.get()
+            try:
+                print(chr(output), end='')
+            except ValueError:
+                print(f'Part 2: {output}')
+                return
+
+        print('> ', end='')
+        line = next(input_iterator)
+        for i in map(ord, list(line)):
+            print(chr(i), end='')
+            await input_queue.put(i)
+
+        print('')
+        await input_queue.put(10)
+
+
+async def part2():
+    input = asyncio.Queue()
+    output = asyncio.Queue()
+    computer = IntcodeComputer('day17.txt', input, output)
+    computer._state._memory[0] = 2
+
+    tasks = [
+        asyncio.create_task(inout_handler(input, output)),
+        asyncio.create_task(computer.execute())
+    ]
+    await asyncio.gather(*tasks)
+
+    print('Part 2 complete')
+
+# asyncio.run(part1())
+asyncio.run(part2())
