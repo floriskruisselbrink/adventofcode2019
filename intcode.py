@@ -227,11 +227,17 @@ INSTRUCTION_MAP = {
 class IntcodeComputer:
     def __init__(self, program: Union[List[int], str], input_queue: Queue, output_queue: Queue):
         if isinstance(program, str):
-            code = read_intlist(program)
+            self._program = read_intlist(program)
         else:
-            code = program
+            self._program = program
 
-        self._state = State(code, input_queue, output_queue)
+        self._input_queue = input_queue
+        self._output_queue = output_queue
+
+        self.reset()
+
+    def reset(self):
+        self._state = State(self._program, self._input_queue, self._output_queue)
 
     async def execute(self):
         current_opcode = self._state.opcode()
