@@ -9,6 +9,14 @@ def reverse(string):
     string = "".join(reversed(string))
     return string
 
+def flatten(l: List[Any]):
+    """ Flatten a (possibly recursively) nested list to one flat list """
+    if l == []:
+        return l
+    if isinstance(l[0], list):
+        return flatten(l[0]) + flatten(l[1:])
+    return l[:1] + flatten(l[1:])
+
 
 def read_line(input_file: str) -> str:
     with open(_file_path(input_file)) as input:
