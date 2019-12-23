@@ -1,6 +1,13 @@
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass
-from typing import List
+from typing import Callable, List
+
+
+def reverse(string):
+    string = "".join(reversed(string))
+    return string
 
 
 def read_line(input_file: str) -> str:
@@ -27,3 +34,16 @@ def _file_path(input_file: str) -> str:
 class Point:
     x: int
     y: int
+
+    def __repr__(self):
+        return f'({self.x},{self.y})'
+
+    def neighbours(self, filter: Callable[[Point], bool] = lambda _: True) -> List[Point]:
+        """ Find all neighbours to this point. """
+        directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        result = []
+        for (x, y) in directions:
+            neighbour = Point(self.x + x, self.y + y)
+            if filter(neighbour):
+                result.append(neighbour)
+        return result
