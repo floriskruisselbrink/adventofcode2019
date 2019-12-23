@@ -1,6 +1,7 @@
 import logging
+from collections import deque
 from dataclasses import dataclass, replace
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 from utils import Point, read_input_by_line, reverse
 
@@ -88,22 +89,25 @@ def add_portals_to_graph(graph: Dict[Point, List[Point]], all_labels: Dict[str, 
             graph[points[1]].append(points[0])
 
 
-def find_all_paths(graph: Dict[Point, List[Point]], start: Point, end: Point, path=[]) -> List[List[Point]]:
-    path = path + [start]
-    if start == end:
-        return [path]
+def find_shortest_path(graph: Dict[Point, List[Point]], start: Point, end: Point, path=[]):
+    dist = {start: [start]}
+    q = deque()
+    q.append(start)
+    while len(q):
+        at = q.popleft()
+        for next in graph[at]:
+            if next not in dist:
+                dist[next] = [dist[at], next]
+                q.append(next)
+    return flatten(dist.get(end))
 
-    if start not in graph:
-        return []
 
-    paths = []
-    for node in graph[start]:
-        if node not in path:
-            newpaths = find_all_paths(graph, node, end, path)
-            for newpath in newpaths:
-                paths.append(newpath)
-
-    return paths
+def flatten(l: List[Any]):
+    if l == []:
+        return l
+    if isinstance(l[0], list):
+        return flatten(l[0]) + flatten(l[1:])
+    return l[:1] + flatten(l[1:])
 
 
 def part1(filename: str):
@@ -125,13 +129,8 @@ def part1(filename: str):
     for node in graph:
         logging.debug(f'  {node}: {graph[node]}')
 
-    paths = find_all_paths(graph, all_labels['AA'][0], all_labels['ZZ'][0])
-    logging.debug('All paths found:')
-    for path in paths:
-        logging.debug(f'  length {len(path)-1}')
-
-    lengths = [len(p) for p in paths]
-    print(f'Part 1: shortest path: {min(lengths)-1}')
+    path = find_shortest_path(graph, all_labels['AA'][0], all_labels['ZZ'][0])
+    print(f'Part 1: shortest path ({len(path)-1})')
 
 
 # part1('day20-test1.txt')
