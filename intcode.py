@@ -4,6 +4,7 @@ from typing import Coroutine, List, Union
 
 from utils import read_intlist
 
+LOG = logging.getLogger(__name__)
 
 def reverse(string: str) -> str:
     string = "".join(reversed(string))
@@ -21,7 +22,7 @@ class Opcode:
 
 
 class State:
-    def __init__(self, program: List[int], input_queue: Union[Queue, Coroutine], output_queue: Queue):
+    def __init__(self, program: List[int], input_queue: Union[Queue, Coroutine], output_queue: Union[Queue, Coroutine]):
         self._memory = program.copy()
         self._input = input_queue
         self._output = output_queue
@@ -46,7 +47,10 @@ class State:
             return await self._input()
 
     async def write_output(self, value: int):
-        await self._output.put(value)
+        if (isinstance(self._output, Queue)):
+            await self._output.put(value)
+        else:
+            await self._output(value)
 
     def read_parameter(self, index: int) -> int:
         """ first parameter has index 0 """
@@ -133,7 +137,7 @@ class InputInstruction(Instruction):
 
     async def execute(self, state):
         value = await state.read_input()
-        logging.debug('Input %d', value)
+        LOG.debug('Input %d', value)
         state.write_parameter(0, value)
         await super().execute(state)
 
@@ -144,7 +148,7 @@ class OutputInstruction(Instruction):
     async def execute(self, state):
         output = state.read_parameter(0)
         await state.write_output(output)
-        logging.debug('Output %d', output)
+        LOG.debug('Output %d', output)
         await super().execute(state)
 
 
