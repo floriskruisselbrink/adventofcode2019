@@ -60,6 +60,18 @@ class NetworkController:
         for address in range(number_of_nics):
             self.nics[address] = NIC(address, self.network_queue)
 
+    async def handle_packet(self, packet: Packet):
+        if packet.address in self.nics:
+            logging.debug('Packet to known target: %r', packet)
+            nic = self.nics[packet.address]
+            await nic.input.put(packet.x)
+            await nic.input.put(packet.y)
+
+        else:
+            logging.debug('Packet to unknown target: %r', packet)
+
+        return True
+
     async def run(self):
         nic_tasks = [
             asyncio.create_task(nic.run())
@@ -76,23 +88,32 @@ class NetworkController:
         while True:
             packet = await self.network_queue.get()
 
-            if packet.address == 255:
-                logging.info(
-                    'Part 1: y-value sent to address 255 = %d', packet.y)
+            if not await self.handle_packet(packet):
                 break
 
-            elif packet.address in self.nics:
-                logging.debug('Packet to known target: %r', packet)
-                nic = self.nics[packet.address]
-                await nic.input.put(packet.x)
-                await nic.input.put(packet.y)
 
-            else:
-                logging.debug('Packet to unknown target: %r', packet)
+class NetworkControllerPart1(NetworkController):
+    def __init__(self, number_of_nics: int):
+        super().__init__(number_of_nics)
+
+    async def handle_packet(self, packet):
+        if packet.address == 255:
+            logging.info('Part 1: y-value sent to address 255 = %d', packet.y)
+            return False
+        else:
+            return await super().handle_packet(packet)
+
+
+class NetworkControllerPart2(NetworkController):
+    def __init__(self, number_of_nics: int):
+        super().__init__(number_of_nics)
+
+    async def packet_handler(self):
+        pass
 
 
 async def part1():
-    controller = NetworkController(50)
+    controller = NetworkControllerPart1(50)
     await controller.run()
 
 asyncio.run(part1())
