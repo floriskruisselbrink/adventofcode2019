@@ -44,31 +44,31 @@ class Grid:
 
 
 NEIGHBOUR_DICT = {
-    0: ((-1, 8), (-1, 11), (0, 1), (0, 5)),
-    1: ((-1, 8), (0, 0), (0, 2), (0, 6)),
-    2: ((-1, 8), (0, 1), (0, 3), (0, 7)),
-    3: ((-1, 8), (0, 2), (0, 4), (0, 8)),
-    4: ((-1, 8), (0, 3), (-1, 14), (0, 9)),
+    0: ((-1, 7), (-1, 11), (0, 1), (0, 5)),
+    1: ((-1, 7), (0, 0), (0, 2), (0, 6)),
+    2: ((-1, 7), (0, 1), (0, 3), (0, 7)),
+    3: ((-1, 7), (0, 2), (0, 4), (0, 8)),
+    4: ((-1, 7), (0, 3), (-1, 13), (0, 9)),
     5: ((0, 0), (-1, 11), (0, 6), (0, 10)),
     6: ((0, 1), (0, 5), (0, 7), (0, 11)),
     7: ((0, 2), (0, 6), (0, 8), (1, 0), (1, 1), (1, 2), (1, 3), (1, 4)),
     8: ((0, 3), (0, 7), (0, 9), (0, 13)),
-    9: ((0, 4), (0, 8), (-1, 14), (0, 14)),
+    9: ((0, 4), (0, 8), (-1, 13), (0, 14)),
     10: ((0, 5), (-1, 11), (0, 11), (0, 15)),
     11: ((0, 6), (0, 10), (1, 0), (1, 5), (1, 10), (1, 15), (1, 20), (0, 16)),
     12: (),
     13: ((0, 8), (1, 4), (1, 9), (1, 14), (1, 19), (1, 24), (0, 14), (0, 18)),
-    14: ((0, 9), (0, 13), (-1, 14), (0, 18)),
+    14: ((0, 9), (0, 13), (-1, 13), (0, 19)),
     15: ((0, 10), (-1, 11), (0, 16), (0, 20)),
     16: ((0, 11), (0, 15), (0, 17), (0, 21)),
     17: ((1, 20), (1, 21), (1, 22), (1, 23), (1, 24), (0, 16), (0, 18), (0, 22)),
     18: ((0, 13), (0, 17), (0, 19), (0, 23)),
-    19: ((0, 14), (0, 18), (-1, 14), (0, 24)),
-    20: ((0, 15), (-1, 11), (0, 21), (-1, 18)),
-    21: ((0, 16), (0, 20), (0, 22), (-1, 18)),
-    22: ((0, 17), (0, 21), (0, 23), (-1, 18)),
-    23: ((0, 18), (0, 22), (0, 24), (-1, 18)),
-    24: ((0, 19), (0, 23), (-1, 14), (-1, 18))
+    19: ((0, 14), (0, 18), (-1, 13), (0, 24)),
+    20: ((0, 15), (-1, 11), (0, 21), (-1, 17)),
+    21: ((0, 16), (0, 20), (0, 22), (-1, 17)),
+    22: ((0, 17), (0, 21), (0, 23), (-1, 17)),
+    23: ((0, 18), (0, 22), (0, 24), (-1, 17)),
+    24: ((0, 19), (0, 23), (-1, 13), (-1, 17))
 }
 
 
@@ -87,7 +87,7 @@ class GridLayer:
     def count_bugs(self) -> int:
         return bin(self.value).count('1')
 
-    def progress(self) -> GridLayer:
+    def progress(self):
         self.new_value = 0
         for i in range(25):
             # skip center tile, it is only used for recursion
@@ -105,23 +105,37 @@ class GridLayer:
                 if (adjacent_bugs == 1) or (adjacent_bugs == 2):
                     self.new_value += 1 << i
 
+    def store_progress(self):
+        self.value = self.new_value
+        self.new_value = None
+
     def get_field(self, i: int) -> bool:
+        assert i >= 0 and i < 25 and i != 12
         return bool(self.value & (1 << i))
 
     def neighbours(self, i: int) -> List[bool]:
         for layer, n in NEIGHBOUR_DICT[i]:
             if layer == 0:
                 yield self.get_field(n)
-            if layer == 1:
+            elif layer == 1:
                 if self.inner:
                     yield self.inner.get_field(n)
                 else:
                     yield False
-            if layer == -1:
+            elif layer == -1:
                 if self.outer:
                     yield self.outer.get_field(n)
                 else:
                     yield False
+
+    def print(self):
+        for i in range(25):
+            if i==12:
+                print('?', end='')
+            else:
+                print('#' if self.value & (1 << i) else '.', end='')
+            if (i+1) % 5 == 0:
+                print()
 
 
 class RecursiveGrid:
@@ -141,15 +155,21 @@ class RecursiveGrid:
             layer.progress()
 
         for layer in self.layers:
-            layer.value = layer.new_value
+            layer.store_progress()
 
         if outer_layer.value == 0:
             self.layers.pop(0)
             self.layers[0].outer = None
-        
+
         if inner_layer.value == 0:
             self.layers.pop(-1)
             self.layers[-1].inner = None
+
+    def print(self):
+        for i, layer in enumerate(self.layers):
+            print(f'Layer {i}:')
+            layer.print()
+
 
 def parse_input(input: List[str]) -> int:
     result = 0
@@ -167,18 +187,15 @@ def part1(input: List[str]):
         seen_layouts.add(grid.value)
         grid.progress()
 
-    print(f'First layout that appears twice: {grid.value}')
+    print(f'Part 1: first layout that appears twice: {grid.value}')
 
 
 def part2(input: List[str], minutes: int):
     start_layer = GridLayer(parse_input(input))
     grid = RecursiveGrid(start_layer)
-
-    print(f'Number of bugs at initial state: {grid.count_bugs()}')
+    
     for i in range(minutes):
-        print(f'Processing step {i}')
         grid.progress()
-        print(f'Number of bugs after {i} minutes: {grid.count_bugs()}')
 
     print(
         f'Part 2: number of bugs after {minutes} minutes: {grid.count_bugs()}')
@@ -200,4 +217,4 @@ puzzle_input = [
 ]
 
 part1(puzzle_input)
-part2(test_input, 10)
+part2(puzzle_input, 200)
